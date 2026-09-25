@@ -1,0 +1,9 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { analyze } from '../src/analysis/engine.js';
+import { filterData } from '../src/normalization/filter.js';
+const base = { source:{}, validation:{status:'ready'}, collections:{ confirmations:[{reason:'إلغاء',merchant:'متجر'}], shipping:[{reason:'رفض',timing:'بعد'}], support:[{reason:'عيب',supportType:'استرجاع'}], states:[{status:'عدد الاوردرات',count:10},{status:'تم التوصيل',count:7}] } };
+test('calculates only supported rates and preserves zero', () => { const r=analyze(base); assert.equal(r.kpis.confirmation.value,'90.0'); assert.equal(r.kpis.delivery.value,'70.0'); assert.equal(r.shipping.after.value,'1'); assert.equal(r.support.exchanged.value,'0'); assert.equal(Object.keys(r.kpis).length,5); });
+test('missing evidence is never represented as zero', () => { const d=structuredClone(base); d.collections.states=[]; const r=analyze(d); assert.equal(r.kpis.total.value,'::'); assert.equal(r.kpis.delivery.value,'::'); });
+test('calculates week-over-week change only when a previous period exists', () => { const d=structuredClone(base); d.previousCollections=structuredClone(base.collections); d.previousCollections.states[0].count=20; d.previousCollections.states[1].count=10; const r=analyze(d); assert.equal(r.comparisons.delivery.value,'+20.0'); assert.equal(r.comparisons.confirmation.value,'-5.0'); });
+test('filters dated records while retaining undated aggregate evidence', () => { const d=structuredClone(base); d.collections.confirmations.push({reason:'إلغاء آخر',merchant:'متجر',date:'2026-09-10'}); d.collections.confirmations[0].date='2026-09-01'; const filtered=filterData(d,{merchant:'متجر',from:'2026-09-01',to:'2026-09-07'}); assert.equal(filtered.collections.confirmations.length,1); assert.equal(filtered.collections.states.length,2); });

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.vite/
+.env
+.env.*
+*.log
+~$*.xlsx
+تيست.xlsx
+WhatsApp Image 2026-09-25 at 6.10.09 PM.jpeg
